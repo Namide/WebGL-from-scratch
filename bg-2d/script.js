@@ -216,8 +216,8 @@ class Texture
         this._init(gl)
 
         this.image = new Image()
-        this.image.src = url
         this.image.addEventListener('load', this._onLoaded.bind(this, gl))
+        this.image.src = url
     }
 
     /**
