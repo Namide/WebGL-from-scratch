@@ -80,11 +80,11 @@ class Uniform
     /**
      * Push the new value to the GPU.
      */
-    update()
+    update(gl)
     {
         if (this.updated)
         {
-            this._updateCallback(this.location, ...this._value)
+            this._updateCallback.call(gl, this.location, ...this._value)
             this.updated = false
         }
     }
@@ -234,9 +234,9 @@ class Texture
             gl.uniform1i(this.textureUniform, this.id)
         }
 
-        this.position.update()
-        this.size.update()
-        this.scale.update()
+        this.position.update(gl)
+        this.size.update(gl)
+        this.scale.update(gl)
     }
 
     /**
@@ -365,8 +365,8 @@ class WebGLBackground
         gl.clear(gl.COLOR_BUFFER_BIT)
         
         // Update uniforms
-        this.time.update()
-        this.screenSize.update()
+        this.time.update(gl)
+        this.screenSize.update(gl)
 
         // Update texture
         this.texture.update(gl)
