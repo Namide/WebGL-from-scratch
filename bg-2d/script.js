@@ -6,14 +6,14 @@ const VERTEX_SHADER = `
 
     precision mediump float;
 
-    attribute vec2 a_position;
+    attribute vec2 a_vertex;
     uniform vec2 u_screenSize;
     varying vec2 v_pixel;
 
     void main(void)
     {
-        v_pixel = (vec2(0.5) + a_position * vec2(0.5, -0.5)) * u_screenSize;
-        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_pixel = (vec2(0.5) + a_vertex * vec2(0.5, -0.5)) * u_screenSize;
+        gl_Position = vec4(a_vertex, 0.0, 1.0);
     }
 `
 
@@ -43,17 +43,150 @@ const FRAGMENT_SHADER = `
         }
         else
         {
-            color = vec4(0.0, sin(u_time / 500.0) / 2.0 + 0.5, 1.0, 1.0);
+            color = vec4(
+                cos(texPixel.x * 2.0 + sin(u_time / 500.0)) * 0.2 + 1.0,
+                cos(texPixel.y * 2.0 + u_time / 300.0) * 0.5 + 0.2,
+                0.25,
+                1.0
+            );
         }
         
         gl_FragColor = vec4(color);
     }
 `
 
-// https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D
+/**
+ * Push variable to shaders 
+ */
+class Uniform
+{
+    /**
+     * @constructor
+     * @param {String} label - Label of the uniform, you can't have same label 
+     * @param {*} value - Value of the uniform: 5.0, [3.2, 5.1]...
+     * @param {WebGLRenderingContext} gl - Context of the render
+     * @param {WebGLProgram} shaderProgram  - Program used for the render
+     * @param {Function} updateCallback - WebGL settings function (depend on uniform type): gl.uniform1f, gl.uniform2f...
+     */
+    constructor(label, value, gl, shaderProgram, updateCallback)
+    {
+        this.label = label
+        this.value = value
+        this.updated = true
+        this._updateCallback = updateCallback
+        this.location = gl.getUniformLocation(shaderProgram, label)
+    }
+
+    /**
+     * Push the new value to the GPU.
+     */
+    update()
+    {
+        if (this.updated)
+        {
+            this._updateCallback(this.location, ...this._value)
+            this.updated = false
+        }
+    }
+
+    /**
+     * Change the value of the uniform.
+     */
+    set value(value)
+    {
+        this.updated = true
+        this._value = Array.isArray(value) ? value : [value]
+    }
+}
+
+
+/**
+ * Square mesh for display in WebGL
+ */
+class Mesh
+{
+    /**
+     * @constructor
+     * @param {string} label - The label of the mesh, use differents labels for differents implementations
+     * @param {WebGLRenderingContext} gl - Context of the render
+     */
+    constructor(label, gl)
+    {
+        // Use differents num to separate images in the render
+        if (!Mesh.NUM)
+        {
+            Mesh.NUM = 1
+        }
+        else
+        {
+            Mesh.NUM++
+        }
+
+        this.id = Texture.NUM
+        this.label = label
+        this.updated = true
+
+        this._init(gl)
+    }
+
+    /**
+     * Initialize the mesh.
+     * 
+     * @param {WebGLRenderingContext} gl - Context of the render
+     */
+    _init(gl)
+    {
+        this.vertices = gl.createBuffer()
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices)
+
+        const vertices = [
+            1.0,  1.0,  0.0,
+            -1.0, 1.0,  0.0,
+            1.0,  -1.0, 0.0,
+            -1.0, -1.0, 0.0
+        ]
+    
+        gl.bufferData(
+            gl.ARRAY_BUFFER,
+            new Float32Array(vertices),
+            gl.STATIC_DRAW
+        )
+    }
+    
+    /**
+     * Initialize all attributes of the rectangle.
+     * 
+     * @param {WebGLRenderingContext} gl - Context of the render
+     * @param {WebGLProgram} shaderProgram  - Program used for the render
+     */
+    initAttributes(gl, shaderProgram)
+    {
+        this.verticesAttribute = gl.getAttribLocation(shaderProgram, 'a_vertex' + this.label)
+        gl.enableVertexAttribArray(this.verticesAttribute)
+    }
+
+    /**
+     * Draw the mesh
+     * 
+     * @param {WebGLRenderingContext} gl - Context of the render
+     */
+    draw(gl)
+    {
+        if (this.updated || Mesh.NUM > 1)
+        {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices)
+            gl.vertexAttribPointer(this.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
+
+            this.updated = false
+        }
+        
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    }
+}
 
 /**
  * Use it to add an image in your render.
+ * Example here https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D
  */
 class Texture
 {
@@ -77,11 +210,10 @@ class Texture
         
         this.id = Texture.NUM
         this.label = label
-        this.scale = [1, 1]
         this.position = [10, -10]
         this.size = [0, 0]
 
-        this._initTexture(gl)
+        this._init(gl)
 
         this.image = new Image()
         this.image.src = url
@@ -95,13 +227,16 @@ class Texture
      */
     update(gl)
     {
-        gl.activeTexture(gl.TEXTURE0 + this.id)
-        gl.bindTexture(gl.TEXTURE_2D, this.texture)
-        gl.uniform1i(this.textureUniform, this.id)
+        if (Texture.NUM > 1)
+        {
+            gl.activeTexture(gl.TEXTURE0 + this.id)
+            gl.bindTexture(gl.TEXTURE_2D, this.texture)
+            gl.uniform1i(this.textureUniform, this.id)
+        }
 
-        gl.uniform2f(this.positionUniform, ...this.position)
-        gl.uniform2f(this.sizeUniform, ...this.size)
-        gl.uniform2f(this.scaleUniform, ...this.scale)
+        this.position.update()
+        this.size.update()
+        this.scale.update()
     }
 
     /**
@@ -113,9 +248,10 @@ class Texture
     initUniforms(gl, shaderProgram)
     {
         this.textureUniform = gl.getUniformLocation(shaderProgram, 'u_texture' + this.label)
-        this.positionUniform = gl.getUniformLocation(shaderProgram, 'u_texturePos' + this.label)
-        this.sizeUniform = gl.getUniformLocation(shaderProgram, 'u_textureSize' + this.label)
-        this.scaleUniform = gl.getUniformLocation(shaderProgram, 'u_textureScale' + this.label)
+
+        this.position = new Uniform('u_texturePos' + this.label, [0, 0], gl, shaderProgram, gl.uniform2f)
+        this.size = new Uniform('u_textureSize' + this.label, [0, 0], gl, shaderProgram, gl.uniform2f)
+        this.scale = new Uniform('u_textureScale' + this.label, [1, 1], gl, shaderProgram, gl.uniform2f)
     }
 
     /**
@@ -124,7 +260,7 @@ class Texture
      * 
      * @param {WebGLRenderingContext} gl - Context of the render
      */
-    _initTexture(gl)
+    _init(gl)
     {
         this.texture = gl.createTexture()
         const level = 0 // Mipmap level
@@ -153,7 +289,7 @@ class Texture
          gl.bindTexture(gl.TEXTURE_2D, this.texture)
          gl.texImage2D(gl.TEXTURE_2D, level, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image)
 
-         this.size = [this.image.width, this.image.height]
+         this.size.value = [this.image.width, this.image.height]
          
          if (false) // mipmap
          {
@@ -188,26 +324,17 @@ class WebGLBackground
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
 
         this._clear(gl)
-        this._initRectangleMesh(gl)
+
         this._initProgram(gl)
+        this._initUniforms(gl, this.program)
+
+        this.mesh = new Mesh('', gl)
+        this.mesh.initAttributes(gl, this.program)
 
         this.texture = new Texture('chun-li-by-julio-cezar.jpg', 'Chun', gl)
-        
-        this._initAttributes(gl, this.program)
-        this._initUniforms(gl, this.program)
         this.texture.initUniforms(gl, this.program)
 
         this.gl = gl
-    }
-
-    /**
-     * Global time
-     * 
-     * @type {Number}
-     */
-    set time(time)
-    {
-        this._time = time
     }
     
     /**
@@ -227,10 +354,10 @@ class WebGLBackground
     }
 
     /**
-     * Update the render.
+     * Draw the scene.
      * Call it to every frame if the display change.
      */
-    draw()
+    render()
     {
         const gl = this.gl
 
@@ -238,16 +365,14 @@ class WebGLBackground
         gl.clear(gl.COLOR_BUFFER_BIT)
         
         // Update uniforms
-        gl.uniform1f(this.timeUniform, this._time)
-        gl.uniform2f(this.screenSizeUniform, this.width, this.height)
+        this.time.update()
+        this.screenSize.update()
 
         // Update texture
         this.texture.update(gl)
 
-        // Push to mesh
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.squareVerticesBuffer)
-        gl.vertexAttribPointer(this.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        // Draw mesh
+        this.mesh.draw(gl)
     }
 
     /**
@@ -262,30 +387,6 @@ class WebGLBackground
 
         // Clear old colors
         gl.clear(gl.COLOR_BUFFER_BIT)
-    }
-
-    /**
-     * Create mesh to display the shader
-     * 
-     * @param {WebGLRenderingContext} gl - Context of the render
-     */
-    _initRectangleMesh(gl)
-    {
-        this.squareVerticesBuffer = gl.createBuffer()
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.squareVerticesBuffer)
-
-        const vertices = [
-            1.0,  1.0,  0.0,
-            -1.0, 1.0,  0.0,
-            1.0,  -1.0, 0.0,
-            -1.0, -1.0, 0.0
-        ]
-    
-        gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(vertices),
-            gl.STATIC_DRAW
-        )
     }
 
     /**
@@ -314,18 +415,6 @@ class WebGLBackground
     }
 
     /**
-     * Initialize all attributes of the rectangle.
-     * 
-     * @param {WebGLRenderingContext} gl - Context of the render
-     * @param {WebGLProgram} shaderProgram  - Program used for the render
-     */
-    _initAttributes(gl, shaderProgram)
-    {
-        this.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, 'a_position')
-        gl.enableVertexAttribArray(this.vertexPositionAttribute)
-    }
-
-    /**
      * Initialize all uniforms of the scene without the texture's uniforms.
      * 
      * @param {WebGLRenderingContext} gl - Context of the render
@@ -333,11 +422,10 @@ class WebGLBackground
      */
     _initUniforms(gl, shaderProgram)
     {
-        this._time = 0
-        this._screenSize = [window.innerWidth, window.innerHeight]
+        const screenSize = [window.innerWidth, window.innerHeight]
 
-        this.timeUniform = gl.getUniformLocation(shaderProgram, 'u_time')
-        this.screenSizeUniform = gl.getUniformLocation(shaderProgram, 'u_screenSize')
+        this.time = new Uniform('u_time', 0, gl, shaderProgram, gl.uniform1f)
+        this.screenSize = new Uniform('u_screenSize', screenSize, gl, shaderProgram, gl.uniform2f)
     }
     
     /**
@@ -394,13 +482,13 @@ if (WebGLBackground.isWebGlEnabled())
     // Render loop
     function tick(timestamp = 0)
     {
-        webglBackground.time = timestamp
-        webglBackground.texture.position = [
+        webglBackground.time.value = timestamp
+        webglBackground.texture.position.value = [
             100 + 50 * Math.cos(timestamp / 1000),
             100 + 50 * Math.sin(timestamp / 1000)
         ]
 
-        webglBackground.draw()
+        webglBackground.render()
         window.requestAnimationFrame(tick)
     }
 
@@ -409,7 +497,7 @@ if (WebGLBackground.isWebGlEnabled())
     window.addEventListener('resize', onResize)
     function onResize()
     {
-        webglBackground.resize(window.innerWidth, window.innerHeight)
+        webglBackground.screenSize.value = [window.innerWidth, window.innerHeight]
     }
 
 
