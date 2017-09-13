@@ -1,8 +1,17 @@
-// In this exemple I use a draw of Chun li by Julio Cesar
-// and a draw of Josh Van Zuylen from CyberRunner
-// https://webglfundamentals.org/webgl/lessons/webgl-3d-textures.html
+/**
+ * In this sample I use a draw of Chun li by Julio Cesar
+ * and a draw of Josh Van Zuylen: CyberRunner
+ * 
+ * If you need help, please read this articles about webgl:
+ * https://webglfundamentals.org/webgl/lessons/webgl-3d-textures.html
+ * 
+ * @author Damien Doussaud (namide.com)
+ */
 
-// Vertex shader of the render
+
+/**
+ * Vertex shader of the render
+ */
 const VERTEX_SHADER = `
 
     precision mediump float;
@@ -18,7 +27,9 @@ const VERTEX_SHADER = `
     }
 `
 
-// fragment shader of the render
+/**
+ * Fragment shader of the render
+ */
 const FRAGMENT_SHADER = `
 
     precision mediump float;
