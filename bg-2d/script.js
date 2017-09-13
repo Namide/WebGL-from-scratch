@@ -19,10 +19,12 @@ const VERTEX_SHADER = `
     attribute vec2 a_vertex;
     uniform vec2 u_screenSize;
     varying vec2 v_pixel;
+    varying vec2 v_uv;
 
     void main(void)
     {
-        v_pixel = (vec2(0.5) + a_vertex * vec2(0.5, -0.5)) * u_screenSize;
+        v_uv = vec2(0.5) + a_vertex * vec2(0.5, -0.5);
+        v_pixel = v_uv * u_screenSize;
         gl_Position = vec4(a_vertex, 0.0, 1.0);
     }
 `
@@ -35,6 +37,7 @@ const FRAGMENT_SHADER = `
     precision mediump float;
 
     varying vec2 v_pixel;
+    varying vec2 v_uv;
 
     uniform float u_time;
 
@@ -63,8 +66,8 @@ const FRAGMENT_SHADER = `
     void main(void)
     {
         vec4 color = vec4(
-            cos(v_pixel.x * 0.003 + sin(u_time / 500.0)) * 0.2 + 1.0,
-            cos(v_pixel.y * 0.007 + u_time / 300.0) * 0.5 + 0.2,
+            cos(v_uv.x + u_time / 715.0) * 0.2 + 1.0,
+            sin(v_uv.y + u_time / 333.0) * 0.5 + 0.2,
             0.25,
             1.0
         );
