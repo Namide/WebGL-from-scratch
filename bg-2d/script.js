@@ -98,6 +98,7 @@ class Uniform
         this.value = value
         this.updated = true
         this._updateCallback = updateCallback
+        this.isArray = Array.isArray(value)
         this.location = gl.getUniformLocation(shaderProgram, label)
     }
 
@@ -108,7 +109,11 @@ class Uniform
     {
         if (this.updated)
         {
-            this._updateCallback.call(gl, this.location, ...this._value)
+            if (this.isArray)
+                this._updateCallback.call(gl, this.location, ...this._value)
+            else 
+                this._updateCallback.call(gl, this.location, this._value)
+            
             this.updated = false
         }
     }
@@ -119,7 +124,12 @@ class Uniform
     set value(value)
     {
         this.updated = true
-        this._value = Array.isArray(value) ? value : [value]
+        this._value = value
+    }
+
+    get value()
+    {
+        return this._value
     }
 }
 
@@ -375,6 +385,7 @@ class WebGLBackground
         this.canvas.height = height
 
         this.gl.viewport(0, 0, width, height)
+        this.screenSize.value = [width, height]
     }
 
     /**
@@ -527,7 +538,7 @@ if (WebGLBackground.isWebGlEnabled())
     window.addEventListener('resize', onResize)
     function onResize()
     {
-        webglBackground.screenSize.value = [window.innerWidth, window.innerHeight]
+        webglBackground.resize(window.innerWidth, window.innerHeight)
     }
 
 
