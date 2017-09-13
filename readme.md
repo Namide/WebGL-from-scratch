@@ -6,5 +6,5 @@
 ## bg-d2
 
 One rectangle mesh (who take all the size) with one shader (vertex and fragment) are displayed.
-On image is loaded without matrix.
+You can load images without matrix (Only position and scale).
 You must used a server to run it cause of the image: You can't load image in local with GPU.

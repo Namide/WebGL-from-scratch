@@ -1,4 +1,5 @@
-// In this exemple I use a draw of Chun li by Julio Cezar
+// In this exemple I use a draw of Chun li by Julio Cesar
+// and a draw of Josh Van Zuylen from CyberRunner
 // https://webglfundamentals.org/webgl/lessons/webgl-3d-textures.html
 
 // Vertex shader of the render
@@ -31,27 +32,36 @@ const FRAGMENT_SHADER = `
     uniform vec2 u_textureSizeChun;
     uniform vec2 u_textureScaleChun;
     
-    void main(void)
-    {
-        vec4 color;
+    uniform sampler2D u_texturestreet;
+    uniform vec2 u_texturePosstreet;
+    uniform vec2 u_textureSizestreet;
+    uniform vec2 u_textureScalestreet;
 
-        vec2 texPixel = (v_pixel - u_texturePosChun) / (u_textureScaleChun.xy * u_textureSizeChun);
+    vec4 displayTexture(vec4 color, sampler2D sample, vec2 pos, vec2 size, vec2 scale)
+    {
+        vec2 texPixel = (v_pixel - pos) / (scale.xy * size);
         if (texPixel.x >= 0.0 && texPixel.x <= 1.0
             && texPixel.y >= 0.0 && texPixel.y <= 1.0)
         {
-            color = texture2D(u_textureChun, texPixel);
+            color = texture2D(sample, texPixel);
         }
-        else
-        {
-            color = vec4(
-                cos(texPixel.x * 2.0 + sin(u_time / 500.0)) * 0.2 + 1.0,
-                cos(texPixel.y * 2.0 + u_time / 300.0) * 0.5 + 0.2,
-                0.25,
-                1.0
-            );
-        }
+
+        return color;
+    }
+    
+    void main(void)
+    {
+        vec4 color = vec4(
+            cos(v_pixel.x * 0.003 + sin(u_time / 500.0)) * 0.2 + 1.0,
+            cos(v_pixel.y * 0.007 + u_time / 300.0) * 0.5 + 0.2,
+            0.25,
+            1.0
+        );
+
+        color = displayTexture(color, u_texturestreet, u_texturePosstreet, u_textureSizestreet, u_textureScalestreet);
+        color = displayTexture(color, u_textureChun, u_texturePosChun, u_textureSizeChun, u_textureScaleChun);
         
-        gl_FragColor = vec4(color);
+        gl_FragColor = color;
     }
 `
 
@@ -227,13 +237,6 @@ class Texture
      */
     update(gl)
     {
-        if (Texture.NUM > 1)
-        {
-            gl.activeTexture(gl.TEXTURE0 + this.id)
-            gl.bindTexture(gl.TEXTURE_2D, this.texture)
-            gl.uniform1i(this.textureUniform, this.id)
-        }
-
         this.position.update(gl)
         this.size.update(gl)
         this.scale.update(gl)
@@ -252,6 +255,10 @@ class Texture
         this.position = new Uniform('u_texturePos' + this.label, [0, 0], gl, shaderProgram, gl.uniform2f)
         this.size = new Uniform('u_textureSize' + this.label, [0, 0], gl, shaderProgram, gl.uniform2f)
         this.scale = new Uniform('u_textureScale' + this.label, [1, 1], gl, shaderProgram, gl.uniform2f)
+
+        gl.activeTexture(gl.TEXTURE0 + this.id)
+        gl.bindTexture(gl.TEXTURE_2D, this.texture)
+        gl.uniform1i(this.textureUniform, this.id)
     }
 
     /**
@@ -331,8 +338,11 @@ class WebGLBackground
         this.mesh = new Mesh('', gl)
         this.mesh.initAttributes(gl, this.program)
 
-        this.texture = new Texture('chun-li-by-julio-cezar.jpg', 'Chun', gl)
-        this.texture.initUniforms(gl, this.program)
+        this.texture1 = new Texture('assets/chun-li-by-julio-cezar.jpg', 'Chun', gl)
+        this.texture2 = new Texture('assets/josh-van-zuylen-cyberrunner.jpg', 'street', gl)
+
+        this.texture1.initUniforms(gl, this.program)
+        this.texture2.initUniforms(gl, this.program)
 
         this.gl = gl
     }
@@ -368,8 +378,9 @@ class WebGLBackground
         this.time.update(gl)
         this.screenSize.update(gl)
 
-        // Update texture
-        this.texture.update(gl)
+        // Update textures
+        this.texture1.update(gl)
+        this.texture2.update(gl)
 
         // Draw mesh
         this.mesh.draw(gl)
@@ -483,9 +494,14 @@ if (WebGLBackground.isWebGlEnabled())
     function tick(timestamp = 0)
     {
         webglBackground.time.value = timestamp
-        webglBackground.texture.position.value = [
+        webglBackground.texture1.position.value = [
             100 + 50 * Math.cos(timestamp / 1000),
             100 + 50 * Math.sin(timestamp / 1000)
+        ]
+
+        webglBackground.texture2.scale.value = [
+            Math.cos(timestamp / 1000) * 0.25 + 1,
+            Math.sin(timestamp / 1000) * 0.25 + 1,
         ]
 
         webglBackground.render()
