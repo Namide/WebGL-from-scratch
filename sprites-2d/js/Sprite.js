@@ -97,7 +97,8 @@ export default class Sprite
 
     _onloaded(texture)
     {
-        this.width = texture.width
-        this.height = texture.height
+        /*this.width = texture.width
+        this.height = texture.height*/
+        this.material.uniform
     }
 }
