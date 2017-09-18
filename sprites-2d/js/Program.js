@@ -2,7 +2,7 @@ import Uniform from './Uniform.js'
 
 class UniformTexture
 {
-    constuctor(label, gl, texture, id, program)
+    constructor(label, gl, texture, id, program)
     {
         this.texture = texture
         this.id = id
@@ -13,7 +13,7 @@ class UniformTexture
      * Push the new value to the GPU.
      */
     update(gl)
-    {        
+    {
         gl.activeTexture(gl.TEXTURE0 + this.id)
         gl.bindTexture(gl.TEXTURE_2D, this.texture)
         gl.uniform1i(this.location, this.id)
@@ -40,11 +40,11 @@ class TexturesGroup
         // this.uniforms.push(uniform)
     }
 
-    /*update(gl)
+    update(gl)
     {
         for (const uniform of this.uniforms)
             uniform.update(gl)
-    }*/
+    }
 }
 
 export default class Program
@@ -52,7 +52,7 @@ export default class Program
     constructor(gl, vertexSrc, fragmentSrc)
     {
         this._init(gl, vertexSrc, fragmentSrc)
-        this.uniforms = {}
+        this.uniforms = []
         this.texturesGroup = new TexturesGroup()
     }
 
@@ -62,6 +62,8 @@ export default class Program
         
         for (const uniform of this.uniforms)
             uniform.update(gl)
+
+        this.texturesGroup.update(gl)
     }
 
     _init(gl, vertexSrc, fragmentSrc)
@@ -77,26 +79,25 @@ export default class Program
         gl.linkProgram(this.program)
         
         if (!gl.getProgramParameter(this.program, gl.LINK_STATUS))
-        {
             throw 'Could not link program: ' + gl.getProgramInfoLog(this.program)
-        }
     }
 
     addUniform(gl, label, value, type)
     {
-        if (!this.uniforms[label])
-            this.uniforms[label] = new Uniform(label, value, gl, this.program, type)
+        let uniform = this.uniforms.find(uniform => uniform.label === label)
 
-        return this.uniforms[label]
+        if (!uniform)
+        {
+            uniform = new Uniform(label, value, gl, this.program, type)
+            this.uniforms.push(uniform)
+        }
+
+        return uniform
     }
 
     addTexture(gl, label, textureData)
     {
         return this.texturesGroup.add(textureData, label, this.program, gl)
-        /* if (!this.uniforms[label])
-            this.uniforms[label] = new Uniform(label, value, gl, this.program, type)
-
-        return this.uniforms[label] */
     }
       
     /**
@@ -113,9 +114,7 @@ export default class Program
         gl.compileShader(shader)
         
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-        {
             throw 'Could not compile shader: ' + gl.getShaderInfoLog(shader)
-        }
         
         return shader
     }

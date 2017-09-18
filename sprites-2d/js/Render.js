@@ -16,11 +16,10 @@ export default class Render
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
 
         this._clear(gl)
-
         this._initUniforms(gl)
 
         this.sprites = []
-
+        
         this.gl = gl
     }
 
@@ -30,7 +29,7 @@ export default class Render
         this.sprites.push(sprite)
     }
 
-    rmSprite(sprite)
+    removeSprite(sprite)
     {
         const i = this.sprites.indexOf(sprite)
         if (i > -1)

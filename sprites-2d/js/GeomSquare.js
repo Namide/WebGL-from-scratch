@@ -60,8 +60,8 @@ export default class GeomSquare
      */
     draw(gl)
     {
-        /*gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices)
-        gl.vertexAttribPointer(this.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)*/
+        /* gl.bindBuffer(gl.ARRAY_BUFFER, this.vertices)
+        gl.vertexAttribPointer(this.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0) */
         
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }

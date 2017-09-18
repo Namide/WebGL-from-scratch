@@ -7,10 +7,10 @@ export default class TextureData
     /**
      * @constructor
      * @param {WebGLRenderingContext} gl - Context of the render
-     * @param {string} url - The url of the image
+     * @param {String} url - The url of the image
      * @param {Function} onLoaded - Callback called after image loaded
      */
-    constructor(gl, url, label)
+    constructor(gl, url, onLoaded)
     {
         if (!gl.INSTANCE_TEXTURES_DATA)
             gl.INSTANCE_TEXTURES_DATA = { [url]: this }
@@ -23,18 +23,13 @@ export default class TextureData
         this.isLoaded = false
         this.width = 0
         this.height = 0
-        this._onLoadedCallback = []
+        this._onLoadedCallback = onLoaded
 
         this._init(gl)
 
         this.image = new Image()
         this.image.addEventListener('load', this._onLoaded.bind(this, gl))
         this.image.src = url
-    }
-
-    addOnLoaded(callback)
-    {
-        this._onLoadedCallback.push(callback)
     }
 
     /**
@@ -62,7 +57,6 @@ export default class TextureData
      * Called when the image is loaded.
      * 
      * @param {WebGLRenderingContext} gl - Context of the render
-     * @param {Function} onLoaded - Callback called after image loaded
      */
     _onLoaded(gl)
     {
@@ -74,14 +68,12 @@ export default class TextureData
         this.width = this.image.width
         this.height = this.image.height
          
+
         if (false) // mipmap
-        {
             gl.generateMipmap(gl.TEXTURE_2D)
-        }
         else
-        {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-        }
+            
 
         //gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
@@ -91,7 +83,7 @@ export default class TextureData
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
         this.isLoaded = true
-        for (const callback of this._onLoadedCallback)
-            callback(this)
+        if (this._onLoadedCallback)
+            this._onLoadedCallback(this)
     }
 }

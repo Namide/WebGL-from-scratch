@@ -23,20 +23,20 @@ if (Render.isWebGlEnabled())
 {
     // Instantiate project
     const canvas = document.getElementById('bg')
-    const webglBackground = new Render(canvas)
-    webglBackground.resize(window.innerWidth, window.innerHeight)
+    const renderer = new Render(canvas)
+    renderer.resize(window.innerWidth, window.innerHeight)
 
     const sprite1 = new Sprite('assets/chun-li-by-julio-cezar.jpg')
     const sprite2 = new Sprite('assets/josh-van-zuylen-cyberrunner.jpg')
 
-    webglBackground.addSprite(sprite1)
-    webglBackground.addSprite(sprite2)
+    renderer.addSprite(sprite1)
+    renderer.addSprite(sprite2)
     
 
     // Render loop
     function tick(timestamp = 0)
     {
-        webglBackground.render()
+        renderer.render()
         window.requestAnimationFrame(tick)
     }
 
@@ -45,11 +45,11 @@ if (Render.isWebGlEnabled())
     window.addEventListener('resize', onResize)
     function onResize()
     {
-        webglBackground.resize(window.innerWidth, window.innerHeight)
+        renderer.resize(window.innerWidth, window.innerHeight)
     }
 
 
-    // start render loop
+    // start renderer loop
     tick()
 }
 else

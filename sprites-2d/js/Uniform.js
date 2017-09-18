@@ -49,6 +49,9 @@ export default class Uniform
         this._splitArgs = type[type.length - 1] !== 'v'
         this._isMatrix = type.includes('Matrix')
         this._setter = gl['uniform' + type]
+
+        if (!this._setter)
+            throw new Error(`the type ${type} don'nt exist`)
     }
 
     /**
